@@ -67,6 +67,9 @@ def plot_chart(data_list, start_hour, end_hour, filename, title):
 def main(symbol: str):
     eastern = pytz.timezone("US/Eastern")
     now = datetime.datetime.now(eastern)
+    if now.hour == 0:
+        now -= datetime.timedelta(days=1)
+
     date_str = now.strftime("%Y%m%d")
 
     base_dir = os.path.join(os.getcwd(), symbol, date_str)
