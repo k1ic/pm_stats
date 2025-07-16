@@ -1,3 +1,6 @@
+#* * * * * cd /var/www/pm_stats && /usr/bin/python3 get_btc_ask1_bid1_price_data.py > /dev/null 2>&1
+# 通过biance、gamma-api.polymarket、clob.polymarket.com 获取当前在进行的market 订单薄的买1、卖1信息，并写入csv
+# 脚本每分钟执行一次，每次执行取三轮买1、卖1信息，每轮间隔10s
 import requests
 import datetime
 import pytz
