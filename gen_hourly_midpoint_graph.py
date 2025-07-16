@@ -96,7 +96,7 @@ def fetch_token_info(symbol, hour_et):
         os.makedirs(base_dir, exist_ok=True)
 
         with open(os.path.join(base_dir, "markets.json"), "w") as f:
-            json.dump(market, f, indent=2)
+            json.dump(response.json(), f, indent=2)
 
         outcomes = json.loads(market["outcomes"])
         prices = json.loads(market["outcomePrices"])
