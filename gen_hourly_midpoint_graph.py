@@ -70,33 +70,6 @@ def plot_chart(data_list, start_hour, end_hour, filename, title):
     plt.close()
     print(f"[DONE] Saved: {filename}")
 
-#def fetch_token_info(symbol, hour_et):
-#    symbol_slug_map = {
-#        "btc": "bitcoin",
-#        "eth": "ethereum",
-#        "sol": "solana",
-#        "xrp": "xrp"
-#    }
-#    symbol_slug = symbol_slug_map.get(symbol, "unknown")
-#
-#    hour_12 = hour_et.hour % 12 or 12
-#    am_pm = "am" if hour_et.hour < 12 else "pm"
-#    slug = f"{symbol_slug}-up-or-down-{hour_et.strftime('%B').lower()}-{hour_et.day}-{hour_12}{am_pm}-et"
-#
-#    try:
-#        url = f"https://gamma-api.polymarket.com/markets?slug={slug}"
-#        response = requests.get(url)
-#        response.raise_for_status()
-#        market = response.json()[0]
-#        outcomes = json.loads(market["outcomes"])
-#        prices = json.loads(market["outcomePrices"])
-#        token_ids = json.loads(market["clobTokenIds"])
-#        max_index = prices.index(max(prices, key=lambda x: Decimal(x)))
-#        return token_ids[max_index], outcomes[max_index], prices[max_index]
-#    except Exception as e:
-#        print(f"[ERROR] Failed to fetch or parse market: {slug} -> {e}")
-#        return None, None, None
-
 def fetch_token_info(symbol, hour_et):
     symbol_slug_map = {
         "btc": "bitcoin",
