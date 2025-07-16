@@ -95,7 +95,7 @@ def fetch_token_info(symbol, hour_et):
         base_dir = os.path.join("midpoint", symbol, date_str, hour_str)
         os.makedirs(base_dir, exist_ok=True)
 
-        with open(os.path.join(base_dir, "market.json"), "w") as f:
+        with open(os.path.join(base_dir, "markets.json"), "w") as f:
             json.dump(market, f, indent=2)
 
         outcomes = json.loads(market["outcomes"])
