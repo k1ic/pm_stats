@@ -1,6 +1,6 @@
 #* * * * * cd /var/www/pm_stats && /usr/bin/python3 get_btc_ask1_bid1_price_data.py > /dev/null 2>&1
 # 通过biance、gamma-api.polymarket、clob.polymarket.com 获取当前在进行的market 订单薄的买1、卖1信息，并写入csv
-# 脚本每分钟执行一次，每次执行取三轮买1、卖1信息，每轮间隔10s
+# 脚本每分钟执行一次，每次执行取四轮买1、卖1信息，每轮间隔10s
 import requests
 import datetime
 import pytz
@@ -8,6 +8,7 @@ import time
 import os
 import csv
 import sys
+import json
 
 ET = pytz.timezone("US/Eastern")
 UTC = pytz.utc
@@ -48,14 +49,35 @@ def get_clob_token_ids(slug):
     except:
         return []
 
-def get_last_ask_bid(token_id):
+def get_last_ask_bid(token_id, et_time, symbol, token_id_index):
     url = f"https://clob.polymarket.com/book?token_id={token_id}"
-    res = requests.get(url).json()
-    asks = res.get("asks", [])
-    bids = res.get("bids", [])
+    try:
+        res = requests.get(url)
+        res.raise_for_status()
+        data = res.json()
+    except Exception as e:
+        print(f"[Error] token_id={token_id} fetch failed: {e}")
+        return None, None
+
+    # 保存原始 JSON 数据
+    timestamp = int(time.time())
+    date_str = et_time.strftime('%Y%m%d')
+    dir_path = f"price_data/{symbol}/{date_str}/row_data"
+    os.makedirs(dir_path, exist_ok=True)
+    file_path = os.path.join(dir_path, f"{timestamp}_{token_id_index}.json")
+    if data:
+        with open(file_path, 'w') as f:
+            #json.dump(data, f, indent=2)
+            json.dump(data, f, separators=(',', ':'))
+    else:
+        print(f"[Warning] token_id={token_id} returned empty JSON")
+
+    asks = data.get("asks", [])
+    bids = data.get("bids", [])
 
     last_ask = asks[-1] if asks else None
     last_bid = bids[-1] if bids else None
+
     return last_ask, last_bid
 
 def write_to_csv(et_time, open_price, current_price, up_ask, down_ask, up_bid, down_bid, symbol):
@@ -98,7 +120,7 @@ def main():
     symbol_upper = symbol.upper()
     slug_base = symbol_map[symbol]
 
-    for i in range(3):
+    for i in range(4):
         try:
             open_price = get_open_price(symbol_upper)
             current_price = get_current_price(symbol_upper)
@@ -108,8 +130,8 @@ def main():
                 print(f"[{i}] Not enough token_ids found for {slug}")
                 continue
 
-            up_ask, up_bid = get_last_ask_bid(token_ids[0])
-            down_ask, down_bid = get_last_ask_bid(token_ids[1])
+            up_ask, up_bid = get_last_ask_bid(token_ids[0], et_time, symbol, 0)
+            down_ask, down_bid = get_last_ask_bid(token_ids[1], et_time, symbol, 1)
 
             write_to_csv(et_time, open_price, current_price, up_ask, down_ask, up_bid, down_bid, symbol)
             print(f"[{i}] Data written for {slug}")
