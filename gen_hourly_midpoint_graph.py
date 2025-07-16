@@ -70,6 +70,33 @@ def plot_chart(data_list, start_hour, end_hour, filename, title):
     plt.close()
     print(f"[DONE] Saved: {filename}")
 
+#def fetch_token_info(symbol, hour_et):
+#    symbol_slug_map = {
+#        "btc": "bitcoin",
+#        "eth": "ethereum",
+#        "sol": "solana",
+#        "xrp": "xrp"
+#    }
+#    symbol_slug = symbol_slug_map.get(symbol, "unknown")
+#
+#    hour_12 = hour_et.hour % 12 or 12
+#    am_pm = "am" if hour_et.hour < 12 else "pm"
+#    slug = f"{symbol_slug}-up-or-down-{hour_et.strftime('%B').lower()}-{hour_et.day}-{hour_12}{am_pm}-et"
+#
+#    try:
+#        url = f"https://gamma-api.polymarket.com/markets?slug={slug}"
+#        response = requests.get(url)
+#        response.raise_for_status()
+#        market = response.json()[0]
+#        outcomes = json.loads(market["outcomes"])
+#        prices = json.loads(market["outcomePrices"])
+#        token_ids = json.loads(market["clobTokenIds"])
+#        max_index = prices.index(max(prices, key=lambda x: Decimal(x)))
+#        return token_ids[max_index], outcomes[max_index], prices[max_index]
+#    except Exception as e:
+#        print(f"[ERROR] Failed to fetch or parse market: {slug} -> {e}")
+#        return None, None, None
+
 def fetch_token_info(symbol, hour_et):
     symbol_slug_map = {
         "btc": "bitcoin",
@@ -88,6 +115,16 @@ def fetch_token_info(symbol, hour_et):
         response = requests.get(url)
         response.raise_for_status()
         market = response.json()[0]
+
+        # 保存 market.json 文件
+        date_str = hour_et.strftime("%Y%m%d")
+        hour_str = f"{hour_et.hour % 12 or 12}{'am' if hour_et.hour < 12 else 'pm'}"
+        base_dir = os.path.join("midpoint", symbol, date_str, hour_str)
+        os.makedirs(base_dir, exist_ok=True)
+
+        with open(os.path.join(base_dir, "market.json"), "w") as f:
+            json.dump(market, f, indent=2)
+
         outcomes = json.loads(market["outcomes"])
         prices = json.loads(market["outcomePrices"])
         token_ids = json.loads(market["clobTokenIds"])
@@ -138,7 +175,24 @@ def main(symbol: str):
         (18, 23): []
     }
 
+    skip_groups = set()
+    if current_hour >= 6 and current_minute >= 1:
+        skip_groups.add((0, 5))
+    if current_hour >= 12 and current_minute >= 1:
+        skip_groups.add((6, 11))
+    if current_hour >= 18 and current_minute >= 1:
+        skip_groups.add((12, 17))
+
     for hour in range(0, current_hour + 1):
+        # 如果该小时属于某个 skip group，直接跳过
+        skip = False
+        for group in skip_groups:
+            if group[0] <= hour <= group[1]:
+                skip = True
+                break
+        if skip:
+            continue
+
         hour_dt = today_et + datetime.timedelta(hours=hour)
         hour_str = f"{hour % 12 or 12}{'am' if hour < 12 else 'pm'}"
 
