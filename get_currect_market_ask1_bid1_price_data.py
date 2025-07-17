@@ -34,9 +34,19 @@ def get_et_hour_slug(slug_base):
     local_now = datetime.datetime.now(pytz.timezone("Asia/Shanghai"))
     et_now = local_now.astimezone(ET)
     et_hour = et_now.replace(minute=0, second=0, microsecond=0)
-    hour_label = f"{et_hour.hour}am" if et_hour.hour < 12 else f"{et_hour.hour - 12}pm"
+    hour_12 = et_hour.hour % 12 or 12  # 0 -> 12, 13 -> 1, etc.
+    suffix = "am" if et_hour.hour < 12 else "pm"
+    hour_label = f"{hour_12}{suffix}"
     slug = f"{slug_base}-up-or-down-{et_hour.strftime('%B').lower()}-{et_hour.day}-{hour_label}-et"
     return slug, et_now
+
+#def get_et_hour_slug(slug_base):
+#    local_now = datetime.datetime.now(pytz.timezone("Asia/Shanghai"))
+#    et_now = local_now.astimezone(ET)
+#    et_hour = et_now.replace(minute=0, second=0, microsecond=0)
+#    hour_label = f"{et_hour.hour}am" if et_hour.hour < 12 else f"{et_hour.hour - 12}pm"
+#    slug = f"{slug_base}-up-or-down-{et_hour.strftime('%B').lower()}-{et_hour.day}-{hour_label}-et"
+#    return slug, et_now
 
 def get_clob_token_ids(slug):
     url = f"https://gamma-api.polymarket.com/markets?slug={slug}"
@@ -59,15 +69,25 @@ def get_last_ask_bid(token_id, et_time, symbol, token_id_index):
         print(f"[Error] token_id={token_id} fetch failed: {e}")
         return None, None
 
-    # 保存原始 JSON 数据
-    timestamp = int(time.time())
+    # 确保有 timestamp 字段
+    timestamp = data.get("timestamp")
+    if not timestamp:
+        print(f"[Warning] token_id={token_id} has no timestamp")
+        return None, None
+
+    # 将 timestamp 转为 ET 时区的 hour（如 2pm）
+    ts_dt = datetime.datetime.fromtimestamp(int(timestamp)/1000, pytz.utc).astimezone(ET)
+    hour_str = f"{ts_dt.hour}am" if ts_dt.hour < 12 else f"{ts_dt.hour - 12 or 12}pm"
+
+    # 构建文件路径
     date_str = et_time.strftime('%Y%m%d')
-    dir_path = f"price_data/{symbol}/{date_str}/row_data"
+    dir_path = f"price_data/{symbol}/{date_str}/row_data/{hour_str}/{token_id_index}/"
     os.makedirs(dir_path, exist_ok=True)
-    file_path = os.path.join(dir_path, f"{timestamp}_{token_id_index}.json")
+    file_path = os.path.join(dir_path, f"{timestamp}.json")
+
+    # 写入压缩 JSON 数据
     if data:
         with open(file_path, 'w') as f:
-            #json.dump(data, f, indent=2)
             json.dump(data, f, separators=(',', ':'))
     else:
         print(f"[Warning] token_id={token_id} returned empty JSON")
